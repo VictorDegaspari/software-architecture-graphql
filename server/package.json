@@ -1,0 +1,23 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "tsc",
+    "start": "npm run compile && node ./dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^4.7.1",
+    "graphql": "^16.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.2.5",
+    "typescript": "^5.1.3"
+  }
+}

@@ -5,7 +5,17 @@ import { buildSchema } from 'type-graphql';
 import { BooksResolvers } from './resolvers/books-resolvers';
 import { UsersResolvers } from './resolvers/users-resolvers';
 
+// Custom context type
+export interface MyContext {
+  usersResolver: UsersResolvers;
+  booksResolver: BooksResolvers;
+  // Add any additional context properties you need
+}
+
 async function bootstrap() {
+  const usersResolver = new UsersResolvers();
+  const booksResolver = new BooksResolvers();
+
   const schema = await buildSchema({
     resolvers: [
       BooksResolvers,
@@ -15,7 +25,11 @@ async function bootstrap() {
   });
 
   const server = new ApolloServer({
-    schema
+    schema,
+    context: (): MyContext => ({
+      usersResolver,
+      booksResolver
+    }),
   });
   
   const { url } = await server.listen();

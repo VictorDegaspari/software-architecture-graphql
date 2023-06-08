@@ -1,5 +1,6 @@
 import { Min } from "class-validator";
 import { Field, ID, ObjectType } from "type-graphql";
+import { User } from "./user-model";
 
 @ObjectType()
 export class Book {
@@ -10,6 +11,9 @@ export class Book {
     title: String;
 
     @Field()
+    image: String;
+
+    @Field()
     description: String;
 
     @Field()
@@ -18,4 +22,7 @@ export class Book {
 
     @Field()
     created_at: Date;
+
+    @Field(() => User)
+    author: User;
 }

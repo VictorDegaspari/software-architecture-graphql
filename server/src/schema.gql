@@ -4,15 +4,19 @@
 # -----------------------------------------------
 
 type Book {
+  author: User!
   created_at: DateTime!
   description: String!
   id: ID!
+  image: String!
   price: Float!
   title: String!
 }
 
 input CreateBookInput {
+  author_id: String!
   description: String!
+  image: String!
   price: Float!
   title: String!
 }

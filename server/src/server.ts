@@ -2,7 +2,7 @@ import { ApolloServer } from 'apollo-server';
 import path from 'node:path';
 import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
-import { BooksResolvers } from './resolvers/books-resolvers';
+import { BooksResolvers } from './resolvers/books-resolver';
 import { UsersResolvers } from './resolvers/users-resolvers';
 
 // Custom context type

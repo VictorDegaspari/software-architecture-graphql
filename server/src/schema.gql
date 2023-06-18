@@ -32,11 +32,19 @@ The javascript `Date` as string. Type represents date and time as the ISO Date s
 """
 scalar DateTime
 
+input EditBookInput {
+  description: String!
+  id: ID!
+  price: Float!
+  title: String!
+}
+
 type Mutation {
   createBook(data: CreateBookInput!): Book!
   createUser(data: CreateUserInput!): User!
   deleteBook(id: String!): Boolean!
   deleteUser(id: String!): Boolean!
+  editBook(data: EditBookInput!): Book!
 }
 
 type Query {

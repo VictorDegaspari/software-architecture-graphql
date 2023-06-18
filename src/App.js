@@ -40,6 +40,24 @@ const CREATE_BOOK = gql`
   }
 `;
 
+const EDIT_BOOK = gql`
+  mutation Mutation($data: EditBookInput!) {
+    editBook(data: $data) {
+      title
+      price
+      id
+      description
+      created_at
+    }
+  }
+`;
+
+const DELETE_BOOK = gql`
+  mutation Mutation($id: String!) {
+    deleteBook(id: $id)
+  }
+`;
+
 const CREATE_USER = gql`
   mutation Mutation($data: CreateUserInput!) {
     createUser(data: $data) {
@@ -50,14 +68,22 @@ const CREATE_USER = gql`
     }
   }
 `;
-function DisplayBooks() {
+
+function DisplayBooks({ onOrdered }) {
   const [addBook] = useMutation(CREATE_BOOK, {
+    refetchQueries : [GET_ALL_BOOKS]
+  });
+  const [deleteBook] = useMutation(DELETE_BOOK, {
+    refetchQueries : [GET_ALL_BOOKS]
+  });
+  const [editBook] = useMutation(EDIT_BOOK, {
     refetchQueries : [GET_ALL_BOOKS]
   });
   const { data, error, loading } = useQuery(GET_ALL_BOOKS);
   const users = useQuery(GET_ALL_USERS);
-  console.log(users.data)
   const [formData, setFormData] = useState({});
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [isEditing, setIsEditing] = useState({ id: null, title: null, price: null, description: null });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -68,33 +94,86 @@ function DisplayBooks() {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    console.log(name)
     setFormData((prevData) => ({
       ...prevData,
       [name]: name === 'price' ? parseInt(value) : value,
     }));
   }
   
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+    setIsEditing((prevData) => ({
+      ...prevData,
+      [name]: name === 'price' ? parseInt(value) : value,
+    }));
+  }
+  
+  const handleDeleteBook = async (bookId) => {
+    if (!bookId) return;
+    await deleteBook({ variables: { id: bookId } });
+  }
+
+  const resetEdit = () => {
+    setIsEditing({ id: null, title: null, price: null, description: null });
+  }
+
+  const handleEditBook = async (data) => {
+    if (!data || !data.id) return;
+    resetEdit();
+    await editBook({ variables: { data: data } });
+  }
+  
   if (error) return `Submission error! ${error.message}`;
 
   const Books = loading ? 'Carregando...' : data.getBooks.map(({ id, title, description, price, author, image }) => (
     <div className='bookContainer' key={ id }>
-    <img width="250" alt="location-reference" src={`${ image }`} />
-    <h3>{ title }</h3>
-    <b>Descrição do livro:</b>
-    <p>{ description }</p>
-    <br />
-    <b>Preço do livro:</b>
-    <p>R$ { price },00</p>
-    <br />
-    <b>Autor:</b>
-    <p>{ author.name }</p>
-  </div>
+      <div className='relative'>
+        <div className='buy' onClick={() => onOrdered({ id: id, title: title, price: price })}><span>Comprar 🛒</span></div>
+        <img width="250" alt="location-reference" src={`${ image }`} />
+      </div>
+      { isEditing.id === id ? 
+        <>
+          <b>Título:</b>
+          <input name='title' value={isEditing.title} onChange={handleEditChange}/> 
+        </> : 
+        <h3>{ title }</h3>
+      }
+      
+      <b>Descrição do livro:</b>
+      { isEditing.id === id ? 
+        <textarea name='description' value={isEditing.description} onChange={handleEditChange}/> : 
+        <p>{ description }</p> 
+      }
+      <br />
+
+      <b>Preço do livro:</b>
+      { isEditing.id === id ? 
+        <input name='price' type='number' value={isEditing.price} onChange={handleEditChange}/> :  
+        <p>R$ { price },00</p>
+      }
+      <br />
+
+      <b>Autor:</b>
+      <p>{ author.name }</p>
+      <hr/>
+      {((!confirmDelete || confirmDelete !== id) && isEditing.id !== id) && <>
+        <button className='delete' onClick={() => setConfirmDelete(id)}>Deletar</button>
+        <button className='edit' onClick={() => setIsEditing({ id: id, title: title, price: price, description: description })}>Editar</button></>
+      }
+      {confirmDelete && confirmDelete === id && <>
+        <p><b>Deseja realmente excluir?</b></p>
+        <button className='delete' onClick={() => handleDeleteBook(confirmDelete)}>SIM</button>
+        <button className='edit' onClick={() => setConfirmDelete(null)}>NÃO</button></>
+      }
+      {isEditing && isEditing.id === id && <>
+        <button className='delete' onClick={() => handleEditBook(isEditing)}>Salvar</button>
+        <button className='edit' onClick={() => resetEdit()}>Cancelar</button></>
+      }
+    </div>
   ));
 
   return (
     <>
-
       <form id='books-form' onSubmit={ (event) => handleSubmit(event)}>
         <h3>Cadastrar Livro 📚</h3>
         <input name='title' onChange={handleInputChange} placeholder='Nome do livro' required/>
@@ -123,13 +202,11 @@ function DisplayUsers() {
   });
   const [formData, setFormData] = useState({});
 
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     addUser({ variables: { data: formData } });
     setFormData({});
     document.getElementById("users-form").reset();
-
   }
 
   const handleInputChange = (event) => {
@@ -145,30 +222,34 @@ function DisplayUsers() {
   const Users = loading ? 'Carregando...' : data.getUsers.map(({ id, name, email, created_at }) => (
     <div className='bookContainer' key={ id }>
       <h3>{ name }</h3>
-      <b>ID:</b>
-      <p>{ id }</p>
       <br />
       <b>E-mail:</b>
       <p>{ email }</p>
       <br />
       <b>Criado:</b>
-      <p>{ created_at }</p>
+      <p>
+        {
+          new Date(created_at).getDate() }/{ 
+          new Date(created_at).getMonth() < 10 ? '0' + new Date(created_at).getMonth() : new Date(created_at).getMonth()}/{ 
+          new Date(created_at).getFullYear() 
+        }
+      </p>
     </div>
   ));
 
   return (
     <>
       <form id='users-form' onSubmit={ (event) => handleSubmit(event)}>
-        <h3>Cadastrar Usuário 👤</h3>
-        <input name='name' onChange={handleInputChange} placeholder='Nome do usuário' required/>
-        <input type='email' name='email' onChange={handleInputChange} placeholder='E-mail do usuário' required/>
-        <input type='password' name='password' onChange={handleInputChange} placeholder='Senha do usuário' required/>
+        <h3>Cadastrar Autor 👤</h3>
+        <input name='name' onChange={handleInputChange} placeholder='Nome do autor' required/>
+        <input type='email' name='email' onChange={handleInputChange} placeholder='E-mail do autor' required/>
+        <input type='password' name='password' onChange={handleInputChange} placeholder='Senha do autor' required/>
         <button type='submit'>Salvar</button>
       </form>
 
-      <h2>Usuários</h2>
+      <h2>Autores</h2>
       <div className='data-list'>
-        { Users.length === 0 ? 'Nenhum usuário cadastrado 😭' : Users }
+        { Users.length === 0 ? 'Nenhum autor cadastrado 😭' : Users }
       </div>
     </>
   );
@@ -177,19 +258,56 @@ function DisplayUsers() {
 export default function App() {
   const [showUserTab, setShowUserTab] = useState(true);
   const [showBookTab, setShowBookTab] = useState(false);
+  const [orders, setOrders] = useState([]);
+  function openNav() {
+    document.getElementById("orderNav").style.width = "250px";
+  }
+  
+  function closeNav() {
+    document.getElementById("orderNav").style.width = "0";
+  }
+
+  function removeOrder(orderId) {
+    if (!orderId) return;
+    const updatedItems = orders.filter((order) => order.id !== orderId);
+    setOrders(updatedItems);
+  }
+
+  function handleOrders(data) {
+    const orderExist = orders.find(order => order.id === data.id);
+    
+    openNav();
+    if (orderExist) return;
+    setOrders([ ...orders, data ]);
+  }
 
   return (
     <div className='main'>
       <h2>Minha biblioteca GraphQL 🚀</h2>
-      <button type='button' onClick={() => { setShowUserTab(true); setShowBookTab(false) }}>Adicionar Usuário</button>
-      <button type='button' onClick={() => { setShowUserTab(false); setShowBookTab(true) }}>Adicionar Livro</button>
-
+      <button type='button' onClick={() => { setShowUserTab(true); setShowBookTab(false) }}>Autores</button>
+      <button type='button' onClick={() => { setShowUserTab(false); setShowBookTab(true) }}>Livros</button>
+      <button type='button' className='relative' onClick={ () => openNav() }>Meus pedidos</button>
+      <div className='order-nav' id='orderNav'>
+        <div className="closeBtn" onClick={ ()=> closeNav() }>&times;</div>
+        <div>
+          { orders.length < 1 && <span>Nenhum pedido...</span>}
+          { orders.length > 0 && <div>{ orders.map(({ id, price, title }) => (
+            <div className='flex order-content'>
+              <span>{ title }</span>
+              <span>R${ price },00 <span className='delete-order' onClick={() => removeOrder(id) }>🗑</span></span>
+            </div>
+          ))}</div>}
+        </div>
+        
+        <div><b>Total:</b> R$ { orders.reduce((a, b) => +a + +b.price, 0) },00</div>
+      </div>
+      
       <br/>
       {showUserTab &&
         <DisplayUsers />
       }
       {showBookTab &&
-        <DisplayBooks />
+        <DisplayBooks onOrdered={(data) => handleOrders(data)}/>
       }
     </div>
   );

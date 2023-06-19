@@ -213,6 +213,7 @@ p {
   white-space: nowrap;                  
   overflow: hidden; /* "overflow" value must be different from "visible" */
   text-overflow:    ellipsis;
+  width: 0;
 }
 
 .order-nav .closeBtn {
